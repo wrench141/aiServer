@@ -1,46 +1,31 @@
 import Groq from "groq-sdk";
 import { getCurrentTime, runCommand } from "./utils.js";
-import fs from "fs";
+import ChatHistory from "./config/model.js";
 
-
-let chat_history = [];
-
-fs.readFile("./memory.json", "utf8", (err, data) => {
-  if (err) {
-    console.log(err);
-    return err;
-  } else {
-    try {
-      chat_history = JSON.parse(data); // Parse the JSON string into an array
-    } catch (parseErr) {
-      console.log("Error parsing JSON:", parseErr);
-      return parseErr;
-    }
-
-    // Now you can use chat_history.map
-    const formattedChatHistory = chat_history.map((entry) => ({
-      role: "system",
-      content: `CHAT HISTORY :: Query: ${entry.query}, Response: ${entry.response}, timeOfCreation: ${entry.created_At}`,
-    }));
-
-    console.log(formattedChatHistory); // Log the formatted chat history
-  }
-});
 
 const groq = new Groq({
   apiKey: "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",
 });
 
-function writeMemory(newObject, filePath) {
-  fs.writeFileSync(
-    filePath,
-    JSON.stringify(
-      [...JSON.parse(fs.readFileSync(filePath, "utf8")), newObject],
-      null,
-      2
-    )
-  );
-  console.log("New object appended to file successfully!");
+let chat_history = [];
+
+async function initializeChatHistory() {
+  try {
+    chat_history = await ChatHistory.find({});
+    console.log("Chat history loaded from database");
+  } catch (err) {
+    console.error("Error loading chat history:", err);
+  }
+}
+
+async function writeMemory(newObject) {
+  try {
+    const chatEntry = new ChatHistory(newObject);
+    await chatEntry.save();
+    console.log("New object appended to database successfully!");
+  } catch (err) {
+    console.error("Error writing to MongoDB:", err);
+  }
 }
 
 async function runQuery(query, conv_id, callback) {
@@ -52,8 +37,7 @@ async function runQuery(query, conv_id, callback) {
       },
       {
         role: "system",
-        content:
-          "you are wrench jnr, an assistant ai with human like conversation",
+        content: "you are wrench jnr, an assistant ai with human like conversation",
       },
       {
         role: "system",
@@ -79,16 +63,13 @@ async function runQuery(query, conv_id, callback) {
       callback(content);
     }
   }
-  writeMemory(
-    {
-      role: "system",
-      query: query,
-      response: complete_response,
-      memory_ID: conv_id,
-      created_At: new Date(),
-    },
-    "./memory.json"
-  );
+  await writeMemory({
+    role: "system",
+    query: query,
+    response: complete_response,
+    memory_ID: conv_id,
+    created_At: new Date(),
+  });
 }
 
 const processInput = async (query) => {
@@ -115,5 +96,6 @@ const processInput = async (query) => {
   return response;
 };
 
+initializeChatHistory().catch(console.error);
 
 export default runQuery;

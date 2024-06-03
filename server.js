@@ -3,6 +3,7 @@ import http from "http";
 import { Server as SocketIoServer } from "socket.io";
 import cors from "cors";
 import runQuery from "./aiConfig.js";
+import connectDB from "./config/db.js";
 
 const PORT = process.env.PORT || 3000;
 
@@ -49,6 +50,10 @@ io.on("connection", (socket) => {
   });
 });
 
-server.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
+if(connectDB()){
+  server.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+  });
+}else{
+  console.log("DB Error")
+}
