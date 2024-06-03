@@ -7,16 +7,6 @@ const groq = new Groq({
   apiKey: "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",
 });
 
-let chat_history = [];
-
-async function initializeChatHistory() {
-  try {
-    chat_history = await ChatHistory.find({});
-    console.log("Chat history loaded from database");
-  } catch (err) {
-    console.error("Error loading chat history:", err);
-  }
-}
 
 async function writeMemory(newObject) {
   try {
@@ -29,6 +19,7 @@ async function writeMemory(newObject) {
 }
 
 async function runQuery(query, conv_id, callback) {
+  let chat_history = await ChatHistory.find({});
   const chatCompletion = await groq.chat.completions.create({
     messages: [
       {
@@ -95,7 +86,5 @@ const processInput = async (query) => {
   }
   return response;
 };
-
-initializeChatHistory().catch(console.error);
 
 export default runQuery;
